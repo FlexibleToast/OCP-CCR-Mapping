@@ -6,6 +6,7 @@ This script converts snake_case rule names to kebab-case and queries
 the OpenShift CCR resources to find matching compliance check results.
 """
 
+import json
 import subprocess
 import re
 from typing import List, Optional
@@ -45,11 +46,21 @@ def get_ccr_resources(namespace: str = "openshift-compliance") -> List[dict]:
         )
         
         if result.returncode != 0:
-            print(f"Error executing oc get ccr: {result.stderr}")
-            return []
+            # Filter out verbose Kubernetes logs and extract the essential error
+            stderr = result.stderr.strip()
+            
+            # Check for common connection error patterns
+            if "connection refused" in stderr.lower() or "connection refused" in result.stdout.lower():
+                error_msg = f"Failed to connect to OpenShift cluster\n\nThe connection to the server was refused. This typically means:\n  - The cluster is not running or not accessible\n  - The cluster address is incorrect\n  - Network connectivity issues\n\nPlease ensure:\n  - Your OpenShift cluster is running and accessible\n  - The cluster address is correct in your kubeconfig\n  - You have network connectivity to the cluster"
+            elif "couldn't get current server API group list" in stderr:
+                error_msg = f"Failed to connect to OpenShift cluster\n\nThe cluster API is not responding. This typically means:\n  - The cluster is not running or not accessible\n  - The cluster address is incorrect\n  - Network connectivity issues\n\nPlease ensure:\n  - Your OpenShift cluster is running and accessible\n  - The cluster address is correct in your kubeconfig\n  - You have network connectivity to the cluster"
+            else:
+                error_msg = f"Failed to connect to OpenShift cluster\n\nError: {stderr}\n\nPlease ensure:\n  - The 'oc' CLI is installed and in your PATH\n  - You are authenticated to an OpenShift cluster\n  - You have access to the '{namespace}' namespace"
+            
+            print(error_msg)
+            raise SystemExit(1)
         
         # Parse JSON output
-        import json
         ccr_data = json.loads(result.stdout)
         
         # Extract items from the JSON structure

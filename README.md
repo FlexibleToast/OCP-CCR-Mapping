@@ -7,7 +7,7 @@ A Python-based tool that programmatically generates a CSV mapping of OpenShift C
 When auditing OpenShift Container Platform (OCP) clusters against DISA STIG (Security Technical Implementation Guide) requirements, compliance teams need to correlate:
 
 1. **ComplianceCheckResult (CCR) names** - The actual resource names in OpenShift (e.g., `rhcos4-stig-master-usbguard-allow-hid-and-hub`)
-2. **Control IDs (CNTR)** - The STIG control identifiers from the ComplianceAsCode content (e.g., `CNTROS-001030`)
+2. **Control IDs (CNTR-OS)** - The STIG control identifiers from the ComplianceAsCode content (e.g., `CNTR-OS-001030`)
 3. **Vulnerability IDs (V-XXXXXX)** - The DISA STIG vulnerability identifiers (e.g., `V-257585`)
 
 The challenge is that these three data sources are not directly correlated:
@@ -30,12 +30,12 @@ The solution consists of multiple Python modules that work together:
 ```mermaid
 flowchart TD
     %% Nodes
-    A["stig_ocp4.yml (GitHub)<br/>- Defines controls (CNTROS-XXXXXX)<br/>- Rules in snake_case format"]
+    A["stig_ocp4.yml (GitHub)<br/>- Defines controls (CNTR-OS-XXXXXX)<br/>- Rules in snake_case format"]
     B["parse_stig_controls.py<br/>- Fetches YAML from GitHub<br/>- Extracts controls → rules mapping"]
     C["fetch_vulnerability_id.py<br/>- Fetches HTML from stigaview.com<br/>- Extracts Vulnerability ID (V-XXXXXX)"]
     D["query_ccr_rules.py<br/>- Converts snake_case → kebab-case<br/>- Queries CCR resources"]
     E["generate_vulnerability_mapping.py<br/>- Orchestrates all components<br/>- Generates CSV output"]
-    F["ccr_vulnerability_mapping.csv<br/>- Columns: CCR_Name, Control_ID, Vuln_ID, Rule_Name, Status"]
+    F["ccr_vulnerability_mapping.csv<br/>- Columns: CCR_Name, Control_ID, Vulnerability_ID, Status"]
 
     %% Connections
     A -->|Input Data| B
@@ -70,7 +70,7 @@ Parses the STIG YAML file and extracts controls with their associated rules.
 **Example Output:**
 ```python
 {
-    "CNTROS-001030": [
+    "CNTR-OS-001030": [
         "configure_usbguard_auditbackend",
         "kernel_module_usb-storage_disabled",
         "package_usbguard_installed",
@@ -78,7 +78,7 @@ Parses the STIG YAML file and extracts controls with their associated rules.
         "service_usbguard_enabled",
         "usbguard_allow_hid_and_hub"
     ],
-    "CNTROS-000010": [
+    "CNTR-OS-000010": [
         "ocp_insecure_allowed_registries_for_import",
         "ocp_insecure_registries"
     ]
@@ -99,7 +99,7 @@ https://stigaview.com/products/ocp/latest/{control_id}
 
 **Example:**
 ```
-Input:  CNTROS-001030
+Input:  CNTR-OS-001030
 Output: V-257585
 ```
 
@@ -155,7 +155,7 @@ The script generates `ccr_vulnerability_mapping.csv` with the following columns:
 | Column | Description | Example |
 |--------|-------------|---------|
 | CCR_Name | The ComplianceCheckResult resource name | `rhcos4-stig-master-usbguard-allow-hid-and-hub` |
-| Control_ID | The STIG control identifier (with CNTR prefix added) | `CNTR-OS-001030` |
+| Control_ID | The STIG control identifier | `CNTR-OS-001030` |
 | Vulnerability_ID | The DISA STIG vulnerability identifier | `V-257585` |
 | Status | The CCR compliance status (PASS or FAIL) | `PASS` or `FAIL` |
 
