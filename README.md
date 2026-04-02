@@ -27,47 +27,34 @@ This tool bridges these gaps by:
 
 The solution consists of multiple Python modules that work together:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    stig_ocp4.yml (GitHub)                       │
-│  - Defines controls (CNTROS-XXXXXX) and their rules            │
-│  - Rules are in snake_case format                               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              parse_stig_controls.py                             │
-│  - Fetches stig_ocp4.yml from GitHub                            │
-│  - Parses YAML and extracts controls → rules mapping            │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              fetch_vulnerability_id.py                          │
-│  - Fetches HTML from stigaview.com for each CNTR                │
-│  - Extracts Vulnerability ID (V-XXXXXX) from HTML               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              query_ccr_rules.py                                 │
-│  - Converts snake_case → kebab-case                             │
-│  - Queries `oc get ccr -n openshift-compliance`                 │
-│  - Finds CCR resources matching the rule name                   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│           generate_vulnerability_mapping.py                     │
-│  - Orchestrates all components                                  │
-│  - Generates CSV output with all mappings                       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              ccr_vulnerability_mapping.csv                      │
-│  - CCR_Name, Control_ID, Vulnerability_ID, Rule_Name, Status    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    %% Nodes
+    A["stig_ocp4.yml (GitHub)<br/>- Defines controls (CNTROS-XXXXXX)<br/>- Rules in snake_case format"]
+    B["parse_stig_controls.py<br/>- Fetches YAML from GitHub<br/>- Extracts controls → rules mapping"]
+    C["fetch_vulnerability_id.py<br/>- Fetches HTML from stigaview.com<br/>- Extracts Vulnerability ID (V-XXXXXX)"]
+    D["query_ccr_rules.py<br/>- Converts snake_case → kebab-case<br/>- Queries CCR resources"]
+    E["generate_vulnerability_mapping.py<br/>- Orchestrates all components<br/>- Generates CSV output"]
+    F["ccr_vulnerability_mapping.csv<br/>- Columns: CCR_Name, Control_ID, Vuln_ID, Rule_Name, Status"]
+
+    %% Connections
+    A -->|Input Data| B
+    B -->|Control Rules| C
+    C -->|Vulnerability Info| D
+    D -->|Matching CCRs| E
+    E -->|Write Output| F
+
+    %% Styling
+    classDef configFile fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
+    classDef pythonScript fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#f57f17;
+    classDef outputFile fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20;
+
+    class A configFile
+    class B pythonScript
+    class C pythonScript
+    class D pythonScript
+    class E pythonScript
+    class F outputFile
 ```
 
 ## Components
