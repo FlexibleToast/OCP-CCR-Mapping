@@ -217,8 +217,6 @@ pyyaml
    - stigaview.com (for fetching Vulnerability IDs)
    - Your OpenShift cluster (for querying CCR resources)
 
-4. **Control ID Format**: The output includes `CNTR` prefix twice (once from the control ID itself, once added by the script). This is intentional to match the expected format.
-
 ## Troubleshooting
 
 ### "Could not fetch Vulnerability ID"
