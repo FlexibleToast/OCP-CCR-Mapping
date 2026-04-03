@@ -104,10 +104,15 @@ def find_matching_ccr_names(
     case_sensitive: bool = False
 ) -> List[Dict[str, str]]:
     """
-    Find CCR names that contain the kebab-case rule name.
+    Find CCR names that end with the kebab-case rule name (suffix matching).
+    
+    This uses suffix matching to prevent duplicate matches when rules share common prefixes.
+    For example, with rules "configure_network_policies" and "configure_network_policies_namespaces",
+    the CCR "ocp4-stig-configure-network-policies-namespaces" will only match the second rule,
+    not both.
     
     Args:
-        kebab_rule_name: The kebab-case rule name to search for
+        kebab_rule_name: The kebab-case rule name to search for (e.g., "configure-network-policies")
         ccr_resources: List of CCR resource dictionaries
         case_sensitive: Whether to perform case-sensitive matching (default: False)
         
@@ -121,7 +126,8 @@ def find_matching_ccr_names(
         ccr_name = ccr.get("name", "")
         compare_name = ccr_name if case_sensitive else ccr_name.lower()
         
-        if ccr_name and search_term in compare_name:
+        # Use suffix matching: CCR name must end with the rule name
+        if ccr_name and compare_name.endswith(search_term):
             matching_ccr_resources.append(ccr)
     
     return matching_ccr_resources
