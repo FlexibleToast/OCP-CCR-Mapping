@@ -87,10 +87,10 @@ Parses the STIG YAML file and extracts controls with their associated rules.
 
 ### 2. fetch_vulnerability_id.py
 
-Fetches the Vulnerability ID from stigaview.com for each control ID.
+Fetches the Vulnerability ID, SRG, Severity, and CCI from stigaview.com for each control ID.
 
 **Functions:**
-- `fetch_vulnerability_id(control_id)` - Fetches and parses HTML from stigaview.com
+- `fetch_vulnerability_id(control_id)` - Fetches and parses HTML from stigaview.com, returns a dictionary with all extracted data
 
 **URL Pattern:**
 ```
@@ -100,7 +100,12 @@ https://stigaview.com/products/ocp/latest/{control_id}
 **Example:**
 ```
 Input:  CNTR-OS-001030
-Output: V-257585
+Output: {
+    'vulnerability_id': 'V-257585',
+    'srg': 'SRG-APP-000141-CTR-000315',
+    'severity': 'medium (CAT II)',
+    'cci': 'CCI-000381'
+}
 ```
 
 ### 3. query_ccr_rules.py
@@ -125,7 +130,7 @@ Output: ["rhcos4-stig-master-usbguard-allow-hid-and-hub",
 The main orchestration script that combines all components.
 
 **Functions:**
-- `generate_vulnerability_mapping(yaml_file, namespace, output_file)` - Main generation function
+- `generate_vulnerability_mapping(yaml_file, namespace, output_file, include_srg, include_severity, include_cci)` - Main generation function
 - `main()` - Entry point with command-line argument handling
 
 **Features:**
@@ -133,6 +138,7 @@ The main orchestration script that combines all components.
 - Queries CCR resources once and reuses them
 - Handles errors gracefully (missing controls, failed HTTP requests, no CCR matches)
 - Outputs comprehensive CSV with all mappings
+- Optional columns for SRG, Severity, and CCI data
 
 ## Usage
 
@@ -147,9 +153,55 @@ This will:
 2. Query your OpenShift cluster for CCR resources
 3. Generate `ccr_vulnerability_mapping.csv`
 
+### Optional Columns
+
+To include additional STIG information (SRG, Severity, CCI), use the optional flags:
+
+```bash
+# Include SRG column
+python generate_vulnerability_mapping.py --srg
+
+# Include Severity column
+python generate_vulnerability_mapping.py --severity
+
+# Include CCI column
+python generate_vulnerability_mapping.py --cci
+
+# Include all optional columns
+python generate_vulnerability_mapping.py --srg --severity --cci
+```
+
+### Additional Options
+
+```bash
+# Use a local STIG YAML file
+python generate_vulnerability_mapping.py /path/to/stig_ocp4.yml
+
+# Specify a different namespace
+python generate_vulnerability_mapping.py --namespace my-namespace
+
+# Specify a different output file
+python generate_vulnerability_mapping.py --output my_mapping.csv
+
+# Combine options
+python generate_vulnerability_mapping.py --srg --severity --cci --output full_mapping.csv
+```
+
+### Command-Line Arguments
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--namespace` | OpenShift namespace to query CCR resources | `openshift-compliance` |
+| `--output` | Output CSV filename | `ccr_vulnerability_mapping.csv` |
+| `--srg` | Include SRG column in output | Not included |
+| `--severity` | Include Severity column in output | Not included |
+| `--cci` | Include CCI column in output | Not included |
+
 ## Output
 
 The script generates `ccr_vulnerability_mapping.csv` with the following columns:
+
+### Default Columns
 
 | Column | Description | Example |
 |--------|-------------|---------|
@@ -158,7 +210,17 @@ The script generates `ccr_vulnerability_mapping.csv` with the following columns:
 | Vulnerability_ID | The DISA STIG vulnerability identifier | `V-257585` |
 | Status | The CCR compliance status (PASS or FAIL) | `PASS` or `FAIL` |
 
+### Optional Columns (enabled with flags)
+
+| Column | Flag | Description | Example |
+|--------|------|-------------|---------|
+| SRG | `--srg` | Security Requirements Guide identifier | `SRG-APP-000141-CTR-000315` |
+| Severity | `--severity` | Vulnerability severity level | `medium (CAT II)` |
+| CCI | `--cci` | Control Correlation Identifier | `CCI-000381` |
+
 ## Example Output
+
+### Default Output
 
 ```csv
 CCR_Name,Control_ID,Vulnerability_ID,Status
@@ -167,6 +229,14 @@ ocp4-stig-ocp-insecure-registries,CNTR-OS-000010,V-257505,PASS
 ocp4-stig-api-server-tls-security-profile,CNTR-OS-000020,V-257506,PASS
 rhcos4-stig-master-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,FAIL
 rhcos4-stig-worker-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,PASS
+```
+
+### Output with All Optional Columns (`--srg --severity --cci`)
+
+```csv
+CCR_Name,Control_ID,Vulnerability_ID,SRG,Severity,CCI,Status
+ocp4-stig-ocp-insecure-allowed-registries-for-import,CNTR-OS-000010,V-257505,SRG-APP-000141-CTR-000315,medium (CAT II),CCI-000381,PASS
+rhcos4-stig-master-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,SRG-APP-000141-CTR-000315,medium (CAT II),CCI-000381,FAIL
 ```
 
 ## Prerequisites
