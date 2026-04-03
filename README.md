@@ -147,8 +147,7 @@ This will:
 2. Query your OpenShift cluster for CCR resources
 3. Generate `ccr_vulnerability_mapping.csv`
 
-
-### Output
+## Output
 
 The script generates `ccr_vulnerability_mapping.csv` with the following columns:
 
@@ -172,9 +171,15 @@ rhcos4-stig-worker-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,PASS
 
 ## Prerequisites
 
-- Python 3.8+
-- `requests` library (`pip install requests`)
-- `pyyaml` library (`pip install pyyaml`)
+1. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   This installs the required modules:
+   - `requests` - For fetching YAML from GitHub and HTML from stigaview.com
+   - `pyyaml` - For parsing YAML files
+
+2. Python 3.8+
 - `oc` CLI tool configured and authenticated to an OpenShift cluster
 - Access to stigaview.com (for fetching Vulnerability IDs)
 
