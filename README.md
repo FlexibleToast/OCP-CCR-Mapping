@@ -30,19 +30,21 @@ The solution consists of multiple Python modules that work together:
 ```mermaid
 flowchart TD
     %% Nodes
-    A["stig_ocp4.yml (GitHub)<br/>- Defines controls (CNTR-OS-XXXXXX)<br/>- Rules in snake_case format"]
-    B["parse_stig_controls.py<br/>- Fetches YAML from GitHub/local file<br/>- Extracts controls → rules mapping"]
-    C["fetch_vulnerability_id.py<br/>- Fetches HTML from stigaview.com via urllib<br/>- Extracts Vulnerability ID (V-XXXXXX)"]
-    D["query_ccr_rules.py<br/>- Converts snake_case → kebab-case<br/>- Queries CCR resources via oc CLI"]
-    E["generate_vulnerability_mapping.py<br/>- Orchestrates all components in parallel loops<br/>- Generates CSV output"]
-    F["ccr_vulnerability_mapping.csv<br/>- Columns: CCR_Name, Control_ID, Vulnerability_ID, Status (+ optional)"]
+    A["stig_ocp4.yml (GitHub)<br/>- Defines controls CNTR-OS-XXXXXX<br/>- Rules in snake_case format"]
+    B["parse_stig_controls.py<br/>- load_yaml_file()<br/>- extract_controls_to_rules()"]
+    C["fetch_vulnerability_id.py<br/>- fetch_vulnerability_id()<br/>- Returns V-XXXXXX, SRG, Severity, CCI"]
+    D["query_ccr_rules.py<br/>- get_ccr_resources()<br/>- find_matching_ccr_names()"]
+    E["generate_vulnerability_mapping.py<br/>- Entry point / orchestrator<br/>- Calls B, C, D in loops"]
+    F["ccr_vulnerability_mapping.csv<br/>- CCR_Name, Control_ID, Vulnerability_ID, Status<br/>- + optional SRG/Severity/CCI columns"]
 
-    %% Connections
-    A -->|Input Data| B
-    B -->|Control Rules| E
-    C -->|Vulnerability Info| E
-    D -->|Matching CCRs| E
-    E -->|Write Output| F
+    %% Connections - E is the orchestrator that drives everything
+    E -->|Calls load_yaml_file()| B
+    B -->|Returns controls map| E
+    E -->|Calls fetch_vulnerability_id() per control| C
+    C -->|Returns vuln data| E
+    E -->|Calls get_ccr_resources() once<br/>then find_matching_ccr_names() per rule| D
+    D -->|Returns matching CCRs| E
+    E -->|Writes CSV| F
 
     %% Styling
     classDef configFile fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
@@ -243,25 +245,22 @@ rhcos4-stig-master-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,SRG-APP-00
 
 ## Prerequisites
 
-1. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   This installs the required modules:
-   - `requests` - For fetching YAML from GitHub
-   - `pyyaml` - For parsing YAML files
-
-2. Python 3.8+
-3. `oc` CLI tool configured and authenticated to an OpenShift cluster
-4. Access to stigaview.com (for fetching Vulnerability IDs)
-
-## Additional Requirements
-
-- OpenShift cluster with Compliance Operator installed
-- `oc` CLI tool configured with appropriate permissions
-- Read access to:
+- **Python 3.8+**
+- **OpenShift cluster** with Compliance Operator installed
+- **`oc` CLI tool** configured and authenticated to the cluster with appropriate permissions
+- **Network access** to:
   - GitHub: `https://raw.githubusercontent.com/ComplianceAsCode/content/refs/heads/master/controls/stig_ocp4.yml`
   - stigaview.com: `https://stigaview.com/products/ocp/latest/{control_id}`
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs:
+- `requests` — For fetching YAML from GitHub
+- `pyyaml` — For parsing YAML files
 
 ## Limitations
 
