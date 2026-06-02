@@ -38,11 +38,11 @@ flowchart TD
     F["ccr_vulnerability_mapping.csv<br/>- CCR_Name, Control_ID, Vulnerability_ID, Status<br/>- + optional SRG/Severity/CCI columns"]
 
     %% Connections - E is the orchestrator that drives everything
-    E -->|Calls load_yaml_file()| B
+    E -->|Calls load_yaml_file| B
     B -->|Returns controls map| E
-    E -->|Calls fetch_vulnerability_id() per control| C
+    E -->|Calls fetch_vulnerability_id per control| C
     C -->|Returns vuln data| E
-    E -->|Calls get_ccr_resources() + find_matching_ccr_names()| D
+    E -->|Calls get_ccr_resources and find_matching_ccr_names| D
     D -->|Returns matching CCRs| E
     E -->|Writes CSV| F
 
