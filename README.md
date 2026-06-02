@@ -13,7 +13,7 @@ When auditing OpenShift Container Platform (OCP) clusters against DISA STIG (Sec
 This tool bridges these gaps by:
 1. Fetching the latest `stig_ocp4.yml` from the [ComplianceAsCode's GitHub repo](https://github.com/ComplianceAsCode/content/blob/master/controls/stig_ocp4.yml)
 2. Extracting controls and their rules
-3. Fetching Vulnerability IDs from [STIG-A-View](stigaview.com) for each control
+3. Fetching Vulnerability IDs from [STIG-A-View](https://stigaview.com) for each control
 4. Querying OpenShift CCR resources to find matching rule names
 5. Generating a CSV with all the correlations
 
