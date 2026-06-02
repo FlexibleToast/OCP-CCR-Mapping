@@ -42,7 +42,7 @@ flowchart TD
     B -->|Returns controls map| E
     E -->|Calls fetch_vulnerability_id() per control| C
     C -->|Returns vuln data| E
-    E -->|Calls get_ccr_resources() once<br/>then find_matching_ccr_names() per rule| D
+    E -->|Calls get_ccr_resources() + find_matching_ccr_names()| D
     D -->|Returns matching CCRs| E
     E -->|Writes CSV| F
 
