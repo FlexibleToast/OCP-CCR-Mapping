@@ -30,21 +30,25 @@ The solution consists of multiple Python modules that work together:
 ```mermaid
 flowchart TD
     %% Nodes
-    A["stig_ocp4.yml (GitHub)<br/>- Defines controls CNTR-OS-XXXXXX<br/>- Rules in snake_case format"]
-    B["parse_stig_controls.py<br/>- load_yaml_file()<br/>- extract_controls_to_rules()"]
-    C["fetch_vulnerability_id.py<br/>- fetch_vulnerability_id()<br/>- Returns V-XXXXXX, SRG, Severity, CCI"]
-    D["query_ccr_rules.py<br/>- get_ccr_resources()<br/>- find_matching_ccr_names()"]
     E["generate_vulnerability_mapping.py<br/>- Entry point / orchestrator<br/>- Calls B, C, D in loops"]
+    B["parse_stig_controls.py<br/>- load_yaml_file<br/>- extract_controls_to_rules"]
+    A["stig_ocp4.yml (GitHub/Local)<br/>- Defines controls CNTR-OS-XXXXXX<br/>- Rules in snake_case format"]
+    C["fetch_vulnerability_id.py<br/>- fetch_vulnerability_id<br/>- Returns V-XXXXXX, SRG, Severity, CCI"]
+    D["query_ccr_rules.py<br/>- get_ccr_resources<br/>- find_matching_ccr_names"]
     F["ccr_vulnerability_mapping.csv<br/>- CCR_Name, Control_ID, Vulnerability_ID, Status<br/>- + optional SRG/Severity/CCI columns"]
 
     %% Connections - E is the orchestrator that drives everything
-    E -->|Calls load_yaml_file| B
+    E -->|1. Calls load_yaml_file| B
+    B -->|Fetches/Reads| A
     B -->|Returns controls map| E
-    E -->|Calls fetch_vulnerability_id per control| C
+    
+    E -->|2. Calls fetch_vulnerability_id per control| C
     C -->|Returns vuln data| E
-    E -->|Calls get_ccr_resources and find_matching_ccr_names| D
+    
+    E -->|3. Calls get_ccr_resources and find_matching_ccr_names| D
     D -->|Returns matching CCRs| E
-    E -->|Writes CSV| F
+    
+    E -->|4. Writes CSV| F
 
     %% Styling
     classDef configFile fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
