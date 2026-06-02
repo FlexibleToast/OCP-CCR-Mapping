@@ -10,16 +10,10 @@ When auditing OpenShift Container Platform (OCP) clusters against DISA STIG (Sec
 2. **Control IDs (CNTR-OS)** - The STIG control identifiers from the ComplianceAsCode content (e.g., `CNTR-OS-001030`)
 3. **Vulnerability IDs (V-XXXXXX)** - The DISA STIG vulnerability identifiers (e.g., `V-257585`)
 
-The challenge is that these three data sources are not directly correlated:
-
-- The `stig_ocp4.yml` file from ComplianceAsCode defines controls and their associated rules in **snake_case** format
-- OpenShift CCR resources use **kebab-case** naming (converted from snake_case)
-- The Vulnerability IDs must be fetched dynamically from stigaview.com for each control
-
 This tool bridges these gaps by:
 1. Fetching the latest `stig_ocp4.yml` from the [ComplianceAsCode's GitHub repo](https://github.com/ComplianceAsCode/content/blob/master/controls/stig_ocp4.yml)
 2. Extracting controls and their rules
-3. Fetching Vulnerability IDs from stigaview.com for each control
+3. Fetching Vulnerability IDs from [STIG-A-View](stigaview.com) for each control
 4. Querying OpenShift CCR resources to find matching rule names
 5. Generating a CSV with all the correlations
 
