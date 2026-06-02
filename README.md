@@ -30,19 +30,25 @@ The solution consists of multiple Python modules that work together:
 ```mermaid
 flowchart TD
     %% Nodes
-    A["stig_ocp4.yml (GitHub)<br/>- Defines controls (CNTR-OS-XXXXXX)<br/>- Rules in snake_case format"]
-    B["parse_stig_controls.py<br/>- Fetches YAML from GitHub<br/>- Extracts controls → rules mapping"]
-    C["fetch_vulnerability_id.py<br/>- Fetches HTML from stigaview.com<br/>- Extracts Vulnerability ID (V-XXXXXX)"]
-    D["query_ccr_rules.py<br/>- Converts snake_case → kebab-case<br/>- Queries CCR resources"]
-    E["generate_vulnerability_mapping.py<br/>- Orchestrates all components<br/>- Generates CSV output"]
-    F["ccr_vulnerability_mapping.csv<br/>- Columns: CCR_Name, Control_ID, Vulnerability_ID, Status"]
+    E["generate_vulnerability_mapping.py<br/>- Entry point / orchestrator<br/>- Calls B, C, D in loops"]
+    B["parse_stig_controls.py<br/>- load_yaml_file<br/>- extract_controls_to_rules"]
+    A["stig_ocp4.yml (GitHub/Local)<br/>- Defines controls CNTR-OS-XXXXXX<br/>- Rules in snake_case format"]
+    C["fetch_vulnerability_id.py<br/>- fetch_vulnerability_id<br/>- Returns V-XXXXXX, SRG, Severity, CCI"]
+    D["query_ccr_rules.py<br/>- get_ccr_resources<br/>- find_matching_ccr_names"]
+    F["ccr_vulnerability_mapping.csv<br/>- CCR_Name, Control_ID, Vulnerability_ID, Status<br/>- + optional SRG/Severity/CCI columns"]
 
-    %% Connections
-    A -->|Input Data| B
-    B -->|Control Rules| C
-    C -->|Vulnerability Info| D
-    D -->|Matching CCRs| E
-    E -->|Write Output| F
+    %% Connections - E is the orchestrator that drives everything
+    E -->|1. Calls load_yaml_file| B
+    B -->|Fetches/Reads| A
+    B -->|Returns controls map| E
+    
+    E -->|2. Calls fetch_vulnerability_id per control| C
+    C -->|Returns vuln data| E
+    
+    E -->|3. Calls get_ccr_resources and find_matching_ccr_names| D
+    D -->|Returns matching CCRs| E
+    
+    E -->|4. Writes CSV| F
 
     %% Styling
     classDef configFile fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
@@ -64,7 +70,7 @@ flowchart TD
 Parses the STIG YAML file and extracts controls with their associated rules.
 
 **Functions:**
-- `load_yaml_file(url)` - Fetches YAML content from a URL (defaults to GitHub)
+- `load_yaml_file(source)` - Fetches YAML content from a URL or local file path (defaults to GitHub)
 - `extract_controls_to_rules(yaml_content)` - Parses YAML and returns a dictionary mapping control IDs to their rules
 
 **Example Output:**
@@ -115,7 +121,7 @@ Converts snake_case rule names to kebab-case and queries OpenShift CCR resources
 **Functions:**
 - `snake_case_to_kebab_case(rule_name)` - Converts naming convention (e.g., `usbguard_allow_hid_and_hub` → `usbguard-allow-hid-and-hub`)
 - `get_ccr_resources(namespace)` - Executes `oc get ccr` and returns JSON resources
-- `find_matching_ccr_names(kebab_rule_name, ccr_resources)` - Filters CCR names containing the rule name
+- `find_matching_ccr_names(kebab_rule_name, ccr_resources)` - Filters CCR resources whose names end with the rule name (suffix matching)
 - `query_ccr_for_rule(rule_name)` - Main function combining the above
 
 **Example:**
@@ -191,11 +197,13 @@ python generate_vulnerability_mapping.py --srg --severity --cci --output full_ma
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--namespace` | OpenShift namespace to query CCR resources | `openshift-compliance` |
-| `--output` | Output CSV filename | `ccr_vulnerability_mapping.csv` |
+| `yaml_file` | Path to local STIG YAML file (default: download from GitHub) | GitHub URL |
+| `--namespace`, `-n` | OpenShift namespace to query CCR resources | `openshift-compliance` |
+| `--output`, `-o` | Output CSV filename | `ccr_vulnerability_mapping.csv` |
 | `--srg` | Include SRG column in output | Not included |
 | `--severity` | Include Severity column in output | Not included |
 | `--cci` | Include CCI column in output | Not included |
+| `--quiet`, `-q` | Suppress progress messages | Verbose output |
 
 ## Output
 
@@ -241,36 +249,26 @@ rhcos4-stig-master-usbguard-allow-hid-and-hub,CNTR-OS-001030,V-257585,SRG-APP-00
 
 ## Prerequisites
 
-1. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   This installs the required modules:
-   - `requests` - For fetching YAML from GitHub and HTML from stigaview.com
-   - `pyyaml` - For parsing YAML files
-
-2. Python 3.8+
-- `oc` CLI tool configured and authenticated to an OpenShift cluster
-- Access to stigaview.com (for fetching Vulnerability IDs)
-
-## Dependencies
-
-```
-requests
-pyyaml
-```
-
-## Requirements
-
-- OpenShift cluster with Compliance Operator installed
-- `oc` CLI tool configured with appropriate permissions
-- Read access to:
+- **Python 3.8+**
+- **OpenShift cluster** with Compliance Operator installed
+- **`oc` CLI tool** configured and authenticated to the cluster with appropriate permissions
+- **Network access** to:
   - GitHub: `https://raw.githubusercontent.com/ComplianceAsCode/content/refs/heads/master/controls/stig_ocp4.yml`
   - stigaview.com: `https://stigaview.com/products/ocp/latest/{control_id}`
 
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs:
+- `requests` — For fetching YAML from GitHub
+- `pyyaml` — For parsing YAML files
+
 ## Limitations
 
-1. **CCR Name Matching**: The matching logic uses substring matching, which may produce false positives if CCR names contain similar rule names.
+1. **CCR Name Matching**: The matching logic uses suffix matching (CCR name must end with the rule name), which is more precise than substring matching but may still miss CCRs where the rule name appears in a different position within the CCR name.
 
 2. **Manual Controls**: Controls with `status: manual` in stig_ocp4.yml may have empty rules arrays and won't generate mappings.
 
